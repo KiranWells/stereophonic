@@ -1,14 +1,14 @@
 use color_eyre::Result;
+use iced::{Application, Settings};
+use ui::Ui;
 
 mod spi;
 mod types;
 mod ui;
 
 fn main() -> Result<()> {
-    let (mut controller, tx) = spi::Spi::new()?;
-    let app = ui::Ui::new(tx)?;
+    let (controller, tx) = spi::Spi::new()?;
+    controller.spawn();
 
-    controller.spawn()?;
-
-    app.run()
+    Ui::run(Settings::with_flags((tx,))).map_err(|e| e.into())
 }
