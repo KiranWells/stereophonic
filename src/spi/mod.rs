@@ -3,6 +3,7 @@ use color_eyre::Result;
 #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
 use std::{
+    io::Write,
     f64::consts::PI,
     sync::mpsc::{channel, Receiver, Sender},
     thread,
@@ -23,10 +24,11 @@ impl Spi {
     pub fn new() -> Result<(Self, Sender<ControllerMessage>)> {
         let (tx, rx) = channel();
 
+	let mut device;
         #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
         {
             // initialize the SPI device
-            let mut device = Spidev::open("/dev/spidev0.0")?;
+            device = Spidev::open("/dev/spidev0.0")?;
             let options = SpidevOptions::new()
                 .bits_per_word(8)
                 .max_speed_hz(20_000)
@@ -85,7 +87,10 @@ impl Spi {
         println!();
 
         #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
-        self.device.transfer(&mut SpidevTransfer::write(&[val]))?;
+        {
+		println!("Writing: {}", val);
+		self.device.write(&[val])?;
+	}
         #[cfg(not(all(target_arch = "arm", target_os = "linux", target_env = "gnu")))]
         thread::sleep(time::Duration::from_millis(100));
 
