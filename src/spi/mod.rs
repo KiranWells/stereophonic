@@ -1,7 +1,7 @@
 use color_eyre::Result;
 // this cfg statement selects code based on whether we are on the Raspberry Pi
 #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
-use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
+use spidev::{SpiModeFlags, Spidev, SpidevOptions};
 #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
 use std::io::Write;
 use std::{
