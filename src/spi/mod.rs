@@ -2,8 +2,9 @@ use color_eyre::Result;
 // this cfg statement selects code based on whether we are on the Raspberry Pi
 #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
 use spidev::{SpiModeFlags, Spidev, SpidevOptions, SpidevTransfer};
+#[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
+use std::io::Write;
 use std::{
-    io::Write,
     f64::consts::PI,
     sync::mpsc::{channel, Receiver, Sender},
     thread,
@@ -24,14 +25,18 @@ impl Spi {
     pub fn new() -> Result<(Self, Sender<ControllerMessage>)> {
         let (tx, rx) = channel();
 
-	let mut device;
+        #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
+        let mut device;
         #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
         {
             // initialize the SPI device
             device = Spidev::open("/dev/spidev0.0")?;
             let options = SpidevOptions::new()
-                .bits_per_word(8)
+                .bits_per_word(16)
                 .max_speed_hz(20_000)
+                // flags:
+                // SPI_MODE_0 (0x00)  CPOL=0 (Clock Idle low level), CPHA=0 (SDO transmit/change edge active to idle)
+                // SPI_LSB_FIRST=0 (LSB is sent First), SPI_3WIRE=0 (4 wire SPI), SPI_LOOP=0 (no loopback), SPI_NO_CS=0 (CS signal active)
                 .mode(SpiModeFlags::SPI_MODE_0)
                 .build();
             device.configure(&options)?;
@@ -80,6 +85,7 @@ impl Spi {
     fn set_val(&mut self, val: f64) -> Result<()> {
         let val = (val * 255.0) as u8;
 
+        print!("Writing: {}", val);
         // terminal visualization
         for _ in u8::MIN..(val / 2) {
             print!("#");
@@ -88,9 +94,13 @@ impl Spi {
 
         #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "gnu"))]
         {
-		println!("Writing: {}", val);
-		self.device.write(&[val])?;
-	}
+            // bits are: XXCC XXPP
+            // XX = unused
+            // CC = command byte - 01 for write
+            // PP = channel select - 11 for both channels (we only have one, but just to be safe)
+            const COMMAND_BYTE: u8 = 0b0001_0011;
+            self.device.write_all(&[COMMAND_BYTE, val])?;
+        }
         #[cfg(not(all(target_arch = "arm", target_os = "linux", target_env = "gnu")))]
         thread::sleep(time::Duration::from_millis(100));
 
