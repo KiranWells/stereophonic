@@ -32,7 +32,7 @@ impl Spi {
             // initialize the SPI device
             device = Spidev::open("/dev/spidev0.0")?;
             let options = SpidevOptions::new()
-                .bits_per_word(16)
+                .bits_per_word(8)
                 .max_speed_hz(20_000)
                 // flags:
                 // SPI_MODE_0 (0x00)  CPOL=0 (Clock Idle low level), CPHA=0 (SDO transmit/change edge active to idle)
